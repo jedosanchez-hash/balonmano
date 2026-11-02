@@ -7,8 +7,8 @@ import {
   touch,
   getDeviceId,
   softDelete,
-} from './db.js';
-import { buildExportPayload, importPayload } from './sync.js';
+} from './db.js?v=2';
+import { buildExportPayload, importPayload } from './sync.js?v=2';
 
 const POSICIONES = ['portero', 'extremo', 'lateral', 'central', 'pivote'];
 

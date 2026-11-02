@@ -1,4 +1,4 @@
-import { STORE_NAMES, getById, put, getDeviceId, now } from './db.js';
+import { STORE_NAMES, getById, put, getDeviceId, now } from './db.js?v=2';
 
 // Pestaña "Sincronizar" desactivada: los datos ahora viven en Firestore
 // (compartidos entre todos los dispositivos), ya no hay una copia local
