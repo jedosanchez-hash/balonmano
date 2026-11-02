@@ -1,5 +1,9 @@
-import { STORE_NAMES, openDatabase, getById, put, getDeviceId, now } from './db.js';
+import { STORE_NAMES, getById, put, getDeviceId, now } from './db.js';
 
+// Pestaña "Sincronizar" desactivada: los datos ahora viven en Firestore
+// (compartidos entre todos los dispositivos), ya no hay una copia local
+// por dispositivo que fusionar. getAllIncludingDeleted asume IndexedDB y
+// quedó rota; habría que reescribirla si se reactiva esta pantalla.
 /**
  * Motor de integración de datos entre dispositivos sin servidor central:
  * exporta todas las tablas a un objeto plano, e importa/fusiona un export

@@ -1,5 +1,15 @@
-const DB_NAME = 'handball_stats';
-const DB_VERSION = 1;
+import { firebaseConfig } from './firebase-config.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
+import {
+  getFirestore,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  query,
+  where,
+} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 
 export const STORE_NAMES = [
   'campeonatos',
@@ -11,66 +21,31 @@ export const STORE_NAMES = [
   'estadisticas',
 ];
 
-let dbPromise = null;
+const firebaseApp = initializeApp(firebaseConfig);
+const firestore = getFirestore(firebaseApp);
 
 export function openDatabase() {
-  if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      db.createObjectStore('campeonatos', { keyPath: 'id' });
-      db.createObjectStore('equipos', { keyPath: 'id' });
-      const campeonatoEquipos = db.createObjectStore('campeonatoEquipos', { keyPath: 'id' });
-      campeonatoEquipos.createIndex('campeonatoId', 'campeonatoId');
-      campeonatoEquipos.createIndex('equipoId', 'equipoId');
-      db.createObjectStore('jugadores', { keyPath: 'id' });
-      const plantillas = db.createObjectStore('plantillas', { keyPath: 'id' });
-      plantillas.createIndex('campeonatoEquipoId', 'campeonatoEquipoId');
-      const partidos = db.createObjectStore('partidos', { keyPath: 'id' });
-      partidos.createIndex('campeonatoId', 'campeonatoId');
-      const estadisticas = db.createObjectStore('estadisticas', { keyPath: 'id' });
-      estadisticas.createIndex('partidoId', 'partidoId');
-      estadisticas.createIndex('jugadorId', 'jugadorId');
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-  return dbPromise;
-}
-
-function wrap(request) {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
+  return Promise.resolve(firestore);
 }
 
 export async function getAll(storeName) {
-  const db = await openDatabase();
-  const store = db.transaction(storeName, 'readonly').objectStore(storeName);
-  const rows = await wrap(store.getAll());
-  return rows.filter((r) => !r.deleted);
+  const snap = await getDocs(collection(firestore, storeName));
+  return snap.docs.map((d) => d.data()).filter((r) => !r.deleted);
 }
 
 export async function getAllByIndex(storeName, indexName, value) {
-  const db = await openDatabase();
-  const store = db.transaction(storeName, 'readonly').objectStore(storeName);
-  const rows = await wrap(store.index(indexName).getAll(value));
-  return rows.filter((r) => !r.deleted);
+  const q = query(collection(firestore, storeName), where(indexName, '==', value));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => d.data()).filter((r) => !r.deleted);
 }
 
 export async function getById(storeName, id) {
-  const db = await openDatabase();
-  const store = db.transaction(storeName, 'readonly').objectStore(storeName);
-  const row = await wrap(store.get(id));
-  return row || null;
+  const snap = await getDoc(doc(firestore, storeName, id));
+  return snap.exists() ? snap.data() : null;
 }
 
 export async function put(storeName, record) {
-  const db = await openDatabase();
-  const store = db.transaction(storeName, 'readwrite').objectStore(storeName);
-  await wrap(store.put(record));
+  await setDoc(doc(firestore, storeName, record.id), record);
   return record;
 }
 
@@ -100,7 +75,7 @@ export function getDeviceId() {
   return id;
 }
 
-/** Campos de sincronización que debe llevar todo registro nuevo o editado. */
+/** Campos de metadata que debe llevar todo registro nuevo o editado. */
 export function touch(record) {
   record.updatedAt = now();
   record.deviceId = getDeviceId();
