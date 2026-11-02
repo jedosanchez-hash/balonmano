@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Estadísticas Balonmano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <h1>🤾 Estadísticas Balonmano</h1>
+  <div class="campeonato-activo" id="campeonato-activo-indicator">Sin campeonato seleccionado</div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="campeonatos" class="active">Campeonatos</button>
+  <button data-tab="equipos">Equipos</button>
+  <button data-tab="jugadores">Jugadores</button>
+  <button data-tab="partidos">Partidos</button>
+  <button data-tab="reportes">Reportes</button>
+  <button data-tab="sync">Sincronizar</button>
+</nav>
+
+<main id="main">
+  <section class="view" id="view-campeonatos"></section>
+  <section class="view" id="view-equipos" hidden></section>
+  <section class="view" id="view-jugadores" hidden></section>
+  <section class="view" id="view-partidos" hidden></section>
+  <section class="view" id="view-reportes" hidden></section>
+  <section class="view" id="view-sync" hidden></section>
+</main>
+
+<button class="fab" id="fab" title="Agregar">+</button>
+
+<dialog id="dialog-form">
+  <form id="dialog-form-inner" class="form-grid" method="dialog">
+    <h3 id="dialog-form-title">Formulario</h3>
+    <div id="dialog-form-fields"></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn" id="dialog-cancel">Cancelar</button>
+      <button type="submit" class="btn primary">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dialog-picker">
+  <h3 id="dialog-picker-title">Selecciona una opción</h3>
+  <div class="list" id="dialog-picker-list"></div>
+  <div class="dialog-actions">
+    <button type="button" class="btn" id="dialog-picker-cancel">Cancelar</button>
+  </div>
+</dialog>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
