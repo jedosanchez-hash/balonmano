@@ -41,6 +41,29 @@ function saveActiveCampeonato(id) {
   }
 }
 
+function applyTextSize(mode) {
+  document.documentElement.setAttribute('data-text-size', mode);
+  const btn = document.getElementById('toggle-text-size');
+  if (!btn) return;
+  const isLarge = mode === 'large';
+  btn.setAttribute('aria-pressed', String(isLarge));
+  btn.title = isLarge ? 'Desactivar texto grande' : 'Activar texto grande';
+}
+
+function initTextSize() {
+  applyTextSize(safeLocalStorageGet('hb_text_size') === 'large' ? 'large' : 'normal');
+}
+
+function toggleTextSize() {
+  const next = document.documentElement.getAttribute('data-text-size') === 'large' ? 'normal' : 'large';
+  applyTextSize(next);
+  try {
+    localStorage.setItem('hb_text_size', next);
+  } catch (e) {
+    /* best effort */
+  }
+}
+
 function escapeHtml(value) {
   if (value == null) return '';
   return String(value).replace(/[&<>"']/g, (ch) => (
@@ -1010,4 +1033,7 @@ document.getElementById('fab').addEventListener('click', () => {
   else if (activeTab === 'partidos' && !state.partidoDetailId) openPartidoForm();
 });
 
+document.getElementById('toggle-text-size').addEventListener('click', toggleTextSize);
+
+initTextSize();
 render();
