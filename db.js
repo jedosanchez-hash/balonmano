@@ -1,4 +1,4 @@
-import { firebaseConfig } from './firebase-config.js?v=2';
+import { firebaseConfig } from './firebase-config.js?v=3';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 import {
   getFirestore,
@@ -21,7 +21,7 @@ export const STORE_NAMES = [
   'estadisticas',
 ];
 
-const firebaseApp = initializeApp(firebaseConfig);
+export const firebaseApp = initializeApp(firebaseConfig);
 const firestore = getFirestore(firebaseApp);
 
 export function openDatabase() {

@@ -7,8 +7,9 @@ import {
   touch,
   getDeviceId,
   softDelete,
-} from './db.js?v=2';
-import { buildExportPayload, importPayload } from './sync.js?v=2';
+} from './db.js?v=3';
+import { buildExportPayload, importPayload } from './sync.js?v=3';
+import { onAuthReady, signInWithPin } from './auth.js?v=3';
 
 const POSICIONES = ['portero', 'extremo', 'lateral', 'central', 'pivote'];
 
@@ -1035,5 +1036,26 @@ document.getElementById('fab').addEventListener('click', () => {
 
 document.getElementById('toggle-text-size').addEventListener('click', toggleTextSize);
 
-initTextSize();
-render();
+document.getElementById('lock-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pinInput = document.getElementById('lock-pin');
+  const errorEl = document.getElementById('lock-error');
+  errorEl.hidden = true;
+  try {
+    await signInWithPin(pinInput.value.trim());
+  } catch (err) {
+    errorEl.textContent = 'Código incorrecto. Intenta de nuevo.';
+    errorEl.hidden = false;
+    pinInput.value = '';
+    pinInput.focus();
+  }
+});
+
+onAuthReady((isSignedIn) => {
+  document.getElementById('lock-screen').hidden = isSignedIn;
+  document.getElementById('app-root').hidden = !isSignedIn;
+  if (isSignedIn) {
+    initTextSize();
+    render();
+  }
+});

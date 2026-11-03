@@ -7,9 +7,21 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=2" />
+<link rel="stylesheet" href="styles.css?v=3" />
 </head>
 <body>
+
+<div class="lock-screen" id="lock-screen">
+  <form class="lock-card" id="lock-form">
+    <h2>🤾 Estadísticas Balonmano</h2>
+    <p>Ingresa el código de acceso del equipo</p>
+    <input type="password" id="lock-pin" inputmode="numeric" autocomplete="off" placeholder="Código" required />
+    <button type="submit" class="btn primary">Entrar</button>
+    <div class="lock-error" id="lock-error" hidden></div>
+  </form>
+</div>
+
+<div id="app-root" hidden>
 
 <header class="topbar">
   <h1>🤾 Estadísticas Balonmano</h1>
@@ -58,7 +70,9 @@
   </div>
 </dialog>
 
+</div>
+
 <!-- ?v=N fuerza a los navegadores a descartar la copia cacheada; subir N en cada cambio de JS/CSS -->
-<script type="module" src="app.js?v=2"></script>
+<script type="module" src="app.js?v=3"></script>
 </body>
 </html>
