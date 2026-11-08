@@ -1,4 +1,4 @@
-import { firebaseConfig } from './firebase-config.js?v=3';
+import { firebaseConfig } from './firebase-config.js?v=4';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 import {
   getFirestore,
@@ -19,6 +19,8 @@ export const STORE_NAMES = [
   'plantillas',
   'partidos',
   'estadisticas',
+  'lanzamientos',
+  'tiros',
 ];
 
 export const firebaseApp = initializeApp(firebaseConfig);

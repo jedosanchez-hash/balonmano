@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=3" />
+<link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
 
@@ -35,6 +35,7 @@
   <button data-tab="campeonatos" class="active">Campeonatos</button>
   <button data-tab="equipos">Equipos</button>
   <button data-tab="jugadores">Jugadores</button>
+  <button data-tab="lanzamientos">Lanzamientos</button>
   <button data-tab="partidos">Partidos</button>
   <button data-tab="reportes">Reportes</button>
   <button data-tab="sync" hidden>Sincronizar</button>
@@ -44,6 +45,7 @@
   <section class="view" id="view-campeonatos"></section>
   <section class="view" id="view-equipos" hidden></section>
   <section class="view" id="view-jugadores" hidden></section>
+  <section class="view" id="view-lanzamientos" hidden></section>
   <section class="view" id="view-partidos" hidden></section>
   <section class="view" id="view-reportes" hidden></section>
   <section class="view" id="view-sync" hidden></section>
@@ -70,9 +72,25 @@
   </div>
 </dialog>
 
+<dialog id="dialog-tiro">
+  <h3 id="dialog-tiro-title">Lanzamiento</h3>
+  <div id="dialog-tiro-body"></div>
+  <div class="dialog-actions">
+    <button type="button" class="btn" id="dialog-tiro-cerrar">Cerrar</button>
+  </div>
+</dialog>
+
+<dialog id="dialog-tabla">
+  <h3 id="dialog-tabla-title">Estadísticas</h3>
+  <div id="dialog-tabla-content"></div>
+  <div class="dialog-actions">
+    <button type="button" class="btn" id="dialog-tabla-cerrar">Cerrar</button>
+  </div>
+</dialog>
+
 </div>
 
 <!-- ?v=N fuerza a los navegadores a descartar la copia cacheada; subir N en cada cambio de JS/CSS -->
-<script type="module" src="app.js?v=3"></script>
+<script type="module" src="app.js?v=4"></script>
 </body>
 </html>

@@ -7,9 +7,9 @@ import {
   touch,
   getDeviceId,
   softDelete,
-} from './db.js?v=3';
-import { buildExportPayload, importPayload } from './sync.js?v=3';
-import { onAuthReady, signInWithPin } from './auth.js?v=3';
+} from './db.js?v=4';
+import { buildExportPayload, importPayload } from './sync.js?v=4';
+import { onAuthReady, signInWithPin } from './auth.js?v=4';
 
 const POSICIONES = ['portero', 'extremo', 'lateral', 'central', 'pivote'];
 
@@ -340,7 +340,7 @@ function equipoRowHtml(e, campeonatoId, inscrito) {
   return `
     <div class="row">
       <div class="row-main">
-        <div class="row-title">${escapeHtml(e.nombre)}</div>
+        <div class="row-title">${escapeHtml(e.nombre)} ${e.esLocal ? '<span class="pill success">Local</span>' : ''}</div>
         ${e.ciudad ? `<div class="row-sub">${escapeHtml(e.ciudad)}</div>` : ''}
       </div>
       ${middleBtn}
@@ -382,14 +382,59 @@ function openEquipoForm(existing) {
     fields: [
       { name: 'nombre', label: 'Nombre', required: true },
       { name: 'ciudad', label: 'Ciudad / club (opcional)' },
+      { name: 'esLocal', label: 'Mi equipo (Local) — habilita el registro de lanzamientos por zona', type: 'checkbox' },
     ],
-    initial: existing ? { nombre: existing.nombre, ciudad: existing.ciudad || '' } : {},
+    initial: existing ? { nombre: existing.nombre, ciudad: existing.ciudad || '', esLocal: !!existing.esLocal } : {},
     onSubmit: async (values) => {
       if (!values.nombre.trim()) return;
       const record = existing ? { ...existing } : { id: newId('equ_'), deleted: false };
       record.nombre = values.nombre.trim();
       record.ciudad = values.ciudad.trim() || null;
+      record.esLocal = !!values.esLocal;
       await put('equipos', touch(record));
+      await render();
+    },
+  });
+}
+
+// ---------- lanzamientos (catálogo de zonas de lanzamiento) ----------
+
+async function renderLanzamientos() {
+  const view = document.getElementById('view-lanzamientos');
+  const lanzamientos = (await getAll('lanzamientos'))
+    .sort((a, b) => (a.orden ?? 99) - (b.orden ?? 99) || a.nombre.localeCompare(b.nombre));
+  if (!lanzamientos.length) {
+    view.innerHTML = '<div class="empty-state">Todavía no hay tipos de lanzamiento. Usa el botón + para crear el primero.</div>';
+    return;
+  }
+  view.innerHTML = `<div class="list">${lanzamientos.map((l) => `
+    <div class="row">
+      <div class="row-main"><div class="row-title">${escapeHtml(l.nombre)}</div></div>
+      <button class="btn icon" data-action="editar" data-id="${l.id}" title="Editar">✎</button>
+      <button class="btn icon danger" data-action="eliminar" data-id="${l.id}" title="Eliminar">🗑</button>
+    </div>`).join('')}</div>`;
+  view.querySelectorAll('[data-action]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (btn.dataset.action === 'editar') openLanzamientoForm(await getById('lanzamientos', btn.dataset.id));
+      else { await softDelete('lanzamientos', btn.dataset.id); await render(); }
+    });
+  });
+}
+
+function openLanzamientoForm(existing) {
+  openForm({
+    title: existing ? 'Editar lanzamiento' : 'Nuevo lanzamiento',
+    fields: [
+      { name: 'nombre', label: 'Nombre', required: true },
+      { name: 'orden', label: 'Orden (opcional, para ordenar la lista)', type: 'number' },
+    ],
+    initial: existing ? { nombre: existing.nombre, orden: existing.orden ?? '' } : {},
+    onSubmit: async (values) => {
+      if (!values.nombre.trim()) return;
+      const record = existing ? { ...existing } : { id: newId('lanz_'), deleted: false };
+      record.nombre = values.nombre.trim();
+      record.orden = values.orden ?? null;
+      await put('lanzamientos', touch(record));
       await render();
     },
   });
@@ -635,10 +680,17 @@ async function renderPartidoDetalle(view, partidoId) {
   const eVisitante = equipos.get(partido.equipoVisitanteId);
   const { local, visitante } = await computeScore(partidoId, partido.equipoLocalId, partido.equipoVisitanteId);
 
-  const [colLocalHtml, colVisitanteHtml] = await Promise.all([
+  const [colLocal, colVisitante] = await Promise.all([
     renderEquipoColumna(partido, partido.equipoLocalId),
     renderEquipoColumna(partido, partido.equipoVisitanteId),
   ]);
+
+  // "esLocalTeam" = el equipo marcado como "Local" (mi equipo) en la pestaña
+  // Equipos — no confundir con equipoLocalId/eLocal, que es el local/visitante
+  // de ESTE partido en particular.
+  const equipoStatsBtnHtml = (col, equipoId) => col.esLocalTeam
+    ? `<button type="button" class="btn" data-action="tabla-equipo" data-equipo-id="${equipoId}" style="margin-bottom:8px;">Estadísticas del equipo</button>`
+    : '';
 
   view.innerHTML = `
     <div class="view-header">
@@ -655,8 +707,8 @@ async function renderPartidoDetalle(view, partidoId) {
       <div class="row-sub" style="text-align:center; margin-top:8px;">${formatDate(partido.fecha)}${partido.lugar ? ' · ' + escapeHtml(partido.lugar) : ''}</div>
     </div>
     <div class="teams-grid">
-      <div class="card"><h3>${escapeHtml(eLocal ? eLocal.nombre : '?')}</h3>${colLocalHtml}</div>
-      <div class="card"><h3>${escapeHtml(eVisitante ? eVisitante.nombre : '?')}</h3>${colVisitanteHtml}</div>
+      <div class="card"><h3>${escapeHtml(eLocal ? eLocal.nombre : '?')}</h3>${equipoStatsBtnHtml(colLocal, partido.equipoLocalId)}${colLocal.html}</div>
+      <div class="card"><h3>${escapeHtml(eVisitante ? eVisitante.nombre : '?')}</h3>${equipoStatsBtnHtml(colVisitante, partido.equipoVisitanteId)}${colVisitante.html}</div>
     </div>
     <button class="btn danger" data-action="eliminar">Eliminar partido</button>
   `;
@@ -676,15 +728,24 @@ async function renderPartidoDetalle(view, partidoId) {
       await render();
     });
   });
+  view.querySelectorAll('[data-action="tabla-equipo"]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const equipoId = btn.dataset.equipoId;
+      const equipo = equipos.get(equipoId);
+      await showTablaEquipo(partido, equipoId, equipo ? equipo.nombre : '');
+    });
+  });
   wireStatControls(view, partidoId);
 }
 
 async function renderEquipoColumna(partido, equipoId) {
   const links = await getAllByIndex('campeonatoEquipos', 'campeonatoId', partido.campeonatoId);
   const ce = links.find((l) => l.equipoId === equipoId);
-  if (!ce) return '<div class="row-sub">Equipo no inscrito en este campeonato.</div>';
+  if (!ce) return { html: '<div class="row-sub">Equipo no inscrito en este campeonato.</div>', esLocalTeam: false };
   const roster = await getAllByIndex('plantillas', 'campeonatoEquipoId', ce.id);
-  if (!roster.length) return '<div class="row-sub">Sin jugadores en la plantilla.</div>';
+  if (!roster.length) return { html: '<div class="row-sub">Sin jugadores en la plantilla.</div>', esLocalTeam: false };
+  const equipo = await getById('equipos', equipoId);
+  const esLocalTeam = !!(equipo && equipo.esLocal);
   const jugadoresMap = new Map((await getAll('jugadores')).map((j) => [j.id, j]));
   const statsRows = await getAllByIndex('estadisticas', 'partidoId', partido.id);
   const statsByJugador = new Map(statsRows.map((s) => [s.jugadorId, s]));
@@ -694,10 +755,11 @@ async function renderEquipoColumna(partido, equipoId) {
     .filter((r) => r.jugador)
     .sort((a, b) => (a.plantilla.numeroCamiseta ?? 99) - (b.plantilla.numeroCamiseta ?? 99));
 
-  return rows.map(({ plantilla, jugador }) => {
+  const html = rows.map(({ plantilla, jugador }) => {
     const stat = statsByJugador.get(jugador.id) || defaultStat(partido.id, jugador.id, equipoId);
-    return playerStatRowHtml(plantilla, jugador, stat, equipoId);
+    return playerStatRowHtml(plantilla, jugador, stat, equipoId, esLocalTeam);
   }).join('');
+  return { html, esLocalTeam };
 }
 
 function defaultStat(partidoId, jugadorId, equipoId) {
@@ -709,15 +771,24 @@ function defaultStat(partidoId, jugadorId, equipoId) {
   };
 }
 
-function playerStatRowHtml(plantilla, jugador, stat, equipoId) {
+function playerStatRowHtml(plantilla, jugador, stat, equipoId, esLocalTeam) {
   const esPortero = plantilla.posicion === 'portero';
+  // Para el equipo marcado como "Local", Goles se calcula a partir de los
+  // lanzamientos por zona (ver syncGolesFromTiros) en vez de contarse a mano.
+  const golesControl = esLocalTeam
+    ? `<span class="stat-counter" data-field="goles"><span>Goles</span><span class="value tabular">${stat.goles || 0}</span></span>`
+    : statCounterHtml('goles', 'Goles', stat.goles);
+  const lanzamientosBtns = esLocalTeam
+    ? `<button type="button" class="btn" data-action="lanzamientos">Lanzamientos</button>
+       <button type="button" class="btn" data-action="tabla-jugador">Tabla</button>`
+    : '';
   return `
     <div class="player-row" data-jugador-id="${jugador.id}" data-equipo-id="${equipoId}">
       <div class="tabular">#${plantilla.numeroCamiseta ?? '-'}</div>
       <div>
         <div class="player-name">${escapeHtml(jugador.nombre)} ${escapeHtml(jugador.apellido)}</div>
         <div class="stat-controls">
-          ${statCounterHtml('goles', 'Goles', stat.goles)}
+          ${golesControl}
           ${statCounterHtml('asistencias', 'Asist.', stat.asistencias)}
           ${statCounterHtml('exclusiones2min', '2min', stat.exclusiones2min)}
           ${esPortero ? statCounterHtml('paradas', 'Paradas', stat.paradas) : ''}
@@ -725,6 +796,7 @@ function playerStatRowHtml(plantilla, jugador, stat, equipoId) {
           ${cardToggleHtml('tarjetaAmarilla', 'amarilla', 'Am', stat.tarjetaAmarilla)}
           ${cardToggleHtml('tarjetaRoja', 'roja', 'Roj', stat.tarjetaRoja)}
           ${cardToggleHtml('tarjetaAzul', 'azul', 'Az', stat.tarjetaAzul)}
+          ${lanzamientosBtns}
         </div>
       </div>
     </div>`;
@@ -763,6 +835,20 @@ function wireStatControls(view, partidoId) {
         await render();
       });
     });
+    const lanzamientosBtn = row.querySelector('[data-action="lanzamientos"]');
+    if (lanzamientosBtn) {
+      lanzamientosBtn.addEventListener('click', async () => {
+        const [partido, jugador] = await Promise.all([getById('partidos', partidoId), getById('jugadores', jugadorId)]);
+        if (partido && jugador) await openLanzamientosPicker(partido, jugador, equipoId);
+      });
+    }
+    const tablaBtn = row.querySelector('[data-action="tabla-jugador"]');
+    if (tablaBtn) {
+      tablaBtn.addEventListener('click', async () => {
+        const [partido, jugador] = await Promise.all([getById('partidos', partidoId), getById('jugadores', jugadorId)]);
+        if (partido && jugador) await showTablaJugador(partido, jugador, equipoId);
+      });
+    }
   });
 }
 
@@ -781,6 +867,183 @@ async function toggleStat(partidoId, jugadorId, equipoId, field) {
   const stat = await getOrCreateStat(partidoId, jugadorId, equipoId);
   stat[field] = !stat[field];
   await put('estadisticas', touch(stat));
+}
+
+// ---------- lanzamientos por zona (solo equipo "Local") ----------
+
+function tiroId(partidoId, jugadorId, lanzamientoId) {
+  return `tiro_${partidoId}_${jugadorId}_${lanzamientoId}`;
+}
+
+function defaultTiro(partidoId, jugadorId, equipoId, lanzamientoId) {
+  return {
+    id: tiroId(partidoId, jugadorId, lanzamientoId), partidoId, jugadorId, equipoId, lanzamientoId,
+    gol: 0, parado: 0, fuera: 0, deleted: false,
+  };
+}
+
+async function adjustTiro(partidoId, jugadorId, equipoId, lanzamientoId, field, delta) {
+  const id = tiroId(partidoId, jugadorId, lanzamientoId);
+  const existing = await getById('tiros', id) || defaultTiro(partidoId, jugadorId, equipoId, lanzamientoId);
+  existing[field] = Math.max(0, (existing[field] || 0) + delta);
+  await put('tiros', touch(existing));
+  await syncGolesFromTiros(partidoId, jugadorId, equipoId);
+}
+
+// Mantiene estadisticas.goles del jugador igual a la suma de goles de sus
+// lanzamientos, así el marcador y el resto de la UI (que ya lee
+// estadisticas.goles) no necesitan cambios para el equipo Local.
+async function syncGolesFromTiros(partidoId, jugadorId, equipoId) {
+  const tiros = (await getAllByIndex('tiros', 'partidoId', partidoId)).filter((t) => t.jugadorId === jugadorId);
+  const totalGoles = tiros.reduce((sum, t) => sum + (t.gol || 0), 0);
+  const stat = await getOrCreateStat(partidoId, jugadorId, equipoId);
+  stat.goles = totalGoles;
+  await put('estadisticas', touch(stat));
+}
+
+async function openLanzamientosPicker(partido, jugador, equipoId) {
+  const tipos = (await getAll('lanzamientos'))
+    .sort((a, b) => (a.orden ?? 99) - (b.orden ?? 99) || a.nombre.localeCompare(b.nombre));
+  openPicker({
+    title: `Lanzamientos — ${jugador.nombre} ${jugador.apellido}`,
+    items: tipos,
+    labelFn: (t) => t.nombre,
+    emptyMessage: 'No hay tipos de lanzamiento. Créalos en la pestaña Lanzamientos.',
+    onPick: (tipo) => openTiroDialog(partido, jugador, equipoId, tipo),
+  });
+}
+
+async function openTiroDialog(partido, jugador, equipoId, tipo) {
+  const dialog = document.getElementById('dialog-tiro');
+  const existing = await getById('tiros', tiroId(partido.id, jugador.id, tipo.id))
+    || defaultTiro(partido.id, jugador.id, equipoId, tipo.id);
+
+  document.getElementById('dialog-tiro-title').textContent = `${jugador.nombre} ${jugador.apellido} — ${tipo.nombre}`;
+  const body = document.getElementById('dialog-tiro-body');
+  body.innerHTML = `
+    <div class="stat-controls" style="justify-content:center;">
+      ${statCounterHtml('gol', 'Gol', existing.gol)}
+      ${statCounterHtml('parado', 'P', existing.parado)}
+      ${statCounterHtml('fuera', 'X', existing.fuera)}
+    </div>`;
+  body.querySelectorAll('.stat-counter').forEach((counter) => {
+    const field = counter.dataset.field;
+    counter.querySelectorAll('button[data-delta]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        await adjustTiro(partido.id, jugador.id, equipoId, tipo.id, field, Number(btn.dataset.delta));
+        dialog.close();
+        await render();
+      });
+    });
+  });
+
+  const cerrarBtn = document.getElementById('dialog-tiro-cerrar');
+  function handleCerrar() { dialog.close(); }
+  function handleClose() {
+    cerrarBtn.removeEventListener('click', handleCerrar);
+    dialog.removeEventListener('close', handleClose);
+  }
+  cerrarBtn.addEventListener('click', handleCerrar);
+  dialog.addEventListener('close', handleClose);
+  dialog.showModal();
+}
+
+// ---------- tablas de lanzamientos (solo lectura) ----------
+
+function efeFromGol(gol, total) {
+  if (!gol) return 0;
+  return gol / total;
+}
+
+function formatPercent(x) {
+  return `${Math.round(x * 100)}%`;
+}
+
+function buildLanzamientosTableHtml(rows, totalGolesEquipo) {
+  let totalGol = 0;
+  let totalParado = 0;
+  let totalFuera = 0;
+  const body = rows.map((r) => {
+    const total = (r.gol || 0) + (r.parado || 0) + (r.fuera || 0);
+    const efe = efeFromGol(r.gol || 0, total);
+    const pctEq = totalGolesEquipo > 0 ? (r.gol || 0) / totalGolesEquipo : 0;
+    totalGol += r.gol || 0;
+    totalParado += r.parado || 0;
+    totalFuera += r.fuera || 0;
+    return `<tr>
+      <td>${escapeHtml(r.nombre)}</td>
+      <td class="num">${formatPercent(pctEq)}</td>
+      <td class="num">${r.gol || 0}</td>
+      <td class="num">${r.parado || 0}</td>
+      <td class="num">${r.fuera || 0}</td>
+      <td class="num">${total}</td>
+      <td class="num">${formatPercent(efe)}</td>
+    </tr>`;
+  }).join('');
+  const totalT = totalGol + totalParado + totalFuera;
+  const totalEfe = efeFromGol(totalGol, totalT);
+  const totalPct = totalGolesEquipo > 0 ? totalGol / totalGolesEquipo : 0;
+  return `<div class="table-scroll"><table class="tabular">
+    <thead><tr><th>Lanzamiento</th><th class="num">% Eq</th><th class="num">Gol</th><th class="num">P</th><th class="num">X</th><th class="num">T</th><th class="num">Efe %</th></tr></thead>
+    <tbody>${body}
+      <tr><td><strong>Totales</strong></td><td class="num">${formatPercent(totalPct)}</td><td class="num">${totalGol}</td><td class="num">${totalParado}</td><td class="num">${totalFuera}</td><td class="num">${totalT}</td><td class="num">${formatPercent(totalEfe)}</td></tr>
+    </tbody>
+  </table></div>`;
+}
+
+function openTablaDialog(title, rows, totalGolesEquipo) {
+  const dialog = document.getElementById('dialog-tabla');
+  document.getElementById('dialog-tabla-title').textContent = title;
+  document.getElementById('dialog-tabla-content').innerHTML = buildLanzamientosTableHtml(rows, totalGolesEquipo);
+  const cerrarBtn = document.getElementById('dialog-tabla-cerrar');
+  function handleCerrar() { dialog.close(); }
+  function handleClose() {
+    cerrarBtn.removeEventListener('click', handleCerrar);
+    dialog.removeEventListener('close', handleClose);
+  }
+  cerrarBtn.addEventListener('click', handleCerrar);
+  dialog.addEventListener('close', handleClose);
+  dialog.showModal();
+}
+
+async function getLanzamientosCatalogo() {
+  return (await getAll('lanzamientos')).sort((a, b) => (a.orden ?? 99) - (b.orden ?? 99) || a.nombre.localeCompare(b.nombre));
+}
+
+async function showTablaJugador(partido, jugador, equipoId) {
+  const [tipos, tirosEquipo] = await Promise.all([
+    getLanzamientosCatalogo(),
+    getAllByIndex('tiros', 'partidoId', partido.id),
+  ]);
+  const tirosJugador = tirosEquipo.filter((t) => t.jugadorId === jugador.id);
+  const tirosByTipo = new Map(tirosJugador.map((t) => [t.lanzamientoId, t]));
+  const rows = tipos.map((tipo) => {
+    const t = tirosByTipo.get(tipo.id);
+    return { nombre: tipo.nombre, gol: t?.gol || 0, parado: t?.parado || 0, fuera: t?.fuera || 0 };
+  });
+  const totalGolesEquipo = tirosEquipo
+    .filter((t) => t.equipoId === equipoId)
+    .reduce((sum, t) => sum + (t.gol || 0), 0);
+  openTablaDialog(`${jugador.nombre} ${jugador.apellido}`, rows, totalGolesEquipo);
+}
+
+async function showTablaEquipo(partido, equipoId, equipoNombre) {
+  const [tipos, tiros] = await Promise.all([
+    getLanzamientosCatalogo(),
+    getAllByIndex('tiros', 'partidoId', partido.id),
+  ]);
+  const tirosEquipo = tiros.filter((t) => t.equipoId === equipoId);
+  const byTipo = new Map();
+  for (const t of tirosEquipo) {
+    const acc = byTipo.get(t.lanzamientoId) || { gol: 0, parado: 0, fuera: 0 };
+    acc.gol += t.gol || 0;
+    acc.parado += t.parado || 0;
+    acc.fuera += t.fuera || 0;
+    byTipo.set(t.lanzamientoId, acc);
+  }
+  const rows = tipos.map((tipo) => ({ nombre: tipo.nombre, ...(byTipo.get(tipo.id) || { gol: 0, parado: 0, fuera: 0 }) }));
+  const totalGolesEquipo = rows.reduce((sum, r) => sum + r.gol, 0);
+  openTablaDialog(`Lanzamientos del equipo — ${equipoNombre}`, rows, totalGolesEquipo);
 }
 
 // ---------- reportes ----------
@@ -995,6 +1258,7 @@ async function updateTopbar() {
 function fabTitleFor(tab) {
   if (tab === 'equipos' && state.plantillaEquipoId) return 'Agregar jugador a la plantilla';
   if (tab === 'partidos') return 'Nuevo partido';
+  if (tab === 'lanzamientos') return 'Nuevo tipo de lanzamiento';
   return 'Agregar';
 }
 
@@ -1011,6 +1275,7 @@ async function render() {
   if (activeTab === 'campeonatos') await renderCampeonatos();
   else if (activeTab === 'equipos') await renderEquipos();
   else if (activeTab === 'jugadores') await renderJugadores();
+  else if (activeTab === 'lanzamientos') await renderLanzamientos();
   else if (activeTab === 'partidos') await renderPartidos();
   else if (activeTab === 'reportes') await renderReportes();
   else if (activeTab === 'sync') await renderSync();
@@ -1031,6 +1296,7 @@ document.getElementById('fab').addEventListener('click', () => {
     if (state.plantillaEquipoId) openAddJugadorToPlantilla(state.plantillaEquipoId);
     else openEquipoForm();
   } else if (activeTab === 'jugadores') openJugadorForm();
+  else if (activeTab === 'lanzamientos') openLanzamientoForm();
   else if (activeTab === 'partidos' && !state.partidoDetailId) openPartidoForm();
 });
 
