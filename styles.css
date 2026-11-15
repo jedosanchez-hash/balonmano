@@ -347,10 +347,14 @@ dialog .dialog-actions {
   grid-template-columns: auto 1fr;
   gap: 8px 12px;
   align-items: center;
-  padding: 8px 0;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--color-border);
 }
 .player-row:last-child { border-bottom: none; }
+/* Lista de jugadores en el detalle del partido: fondo naranja suave
+   intercalado (fijo, igual en claro/oscuro). */
+.player-row:nth-of-type(odd) { background: #fde3cc; }
+.player-row:nth-of-type(even) { background: #fbd0a3; }
 .player-name { font-weight: 600; font-size: 0.9rem; }
 .player-name-clickable {
   display: block;
