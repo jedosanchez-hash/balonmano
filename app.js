@@ -957,7 +957,8 @@ async function openTiroDialog(partido, jugador, equipoId, tipo) {
         } catch (err) {
           valueEl.textContent = prev;
           tiro[field] = prev;
-          showToast('No se pudo guardar el cambio. Revisa tu conexión e intenta de nuevo.');
+          console.error('Error guardando tiro:', err);
+          showToast(`No se pudo guardar: ${(err && (err.code || err.message)) || err}`);
         }
       });
     });
