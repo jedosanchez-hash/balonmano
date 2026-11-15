@@ -217,9 +217,15 @@ main {
 .row .row-title { font-weight: 600; word-break: break-word; }
 .row .row-sub { color: var(--color-text-muted); font-size: 0.85rem; word-break: break-word; }
 
-/* Lista de jugadores: fondo naranja suave intercalado (fijo, igual en claro/oscuro). */
-#view-jugadores .row:nth-child(odd) { background: #fde3cc; }
-#view-jugadores .row:nth-child(even) { background: #fbd0a3; }
+/* Listas con fondo naranja suave intercalado (fijo, igual en claro/oscuro):
+   pestaña Jugadores, pestaña Lanzamientos y el selector de tipo de
+   lanzamiento (ventana emergente) dentro del detalle de un partido. */
+#view-jugadores .row:nth-child(odd),
+#view-lanzamientos .row:nth-child(odd),
+#dialog-picker-list button:nth-of-type(odd) { background: #fde3cc; }
+#view-jugadores .row:nth-child(even),
+#view-lanzamientos .row:nth-child(even),
+#dialog-picker-list button:nth-of-type(even) { background: #fbd0a3; }
 
 .pill {
   display: inline-flex;
