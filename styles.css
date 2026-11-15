@@ -369,6 +369,14 @@ dialog .dialog-actions {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 4px;
+  align-items: center;
+}
+.player-line-local { margin-top: 0; }
+.player-line-local .player-name-clickable {
+  display: inline;
+  width: auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .stat-counter {
   display: inline-flex;

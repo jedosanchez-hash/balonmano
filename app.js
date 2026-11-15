@@ -810,6 +810,18 @@ function playerStatRowHtml(plantilla, jugador, stat, equipoId, esLocalTeam) {
   const nombreHtml = esLocalTeam
     ? `<button type="button" class="player-name player-name-clickable" data-action="lanzamientos">${nombreCompleto}</button>`
     : `<div class="player-name">${nombreCompleto}</div>`;
+  if (esLocalTeam) {
+    return `
+      <div class="player-row" data-jugador-id="${jugador.id}" data-equipo-id="${equipoId}">
+        <div class="tabular">#${plantilla.numeroCamiseta ?? '-'}</div>
+        <div class="stat-controls player-line-local">
+          ${nombreHtml}
+          ${golesControl}
+          ${extraStatsHtml}
+          ${lanzamientosBtns}
+        </div>
+      </div>`;
+  }
   return `
     <div class="player-row" data-jugador-id="${jugador.id}" data-equipo-id="${equipoId}">
       <div class="tabular">#${plantilla.numeroCamiseta ?? '-'}</div>
