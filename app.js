@@ -792,8 +792,7 @@ function playerStatRowHtml(plantilla, jugador, stat, equipoId, esLocalTeam) {
     ? `<span class="stat-counter" data-field="goles"><span>Goles</span><span class="value tabular">${stat.goles || 0}</span></span>`
     : statCounterHtml('goles', 'Goles', stat.goles);
   const lanzamientosBtns = esLocalTeam
-    ? `<button type="button" class="btn" data-action="lanzamientos">Lanzamientos</button>
-       <button type="button" class="btn" data-action="tabla-jugador">Tabla</button>`
+    ? `<button type="button" class="btn" data-action="tabla-jugador">Tabla</button>`
     : '';
   const nombreCompleto = `${escapeHtml(jugador.nombre)} ${escapeHtml(jugador.apellido)}`;
   const nombreHtml = esLocalTeam
