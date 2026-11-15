@@ -794,11 +794,11 @@ function playerStatRowHtml(plantilla, jugador, stat, equipoId, esLocalTeam) {
   const lanzamientosBtns = esLocalTeam
     ? `<button type="button" class="btn" data-action="tabla-jugador">Tabla</button>`
     : '';
-  // Para el equipo Local, Asist. y 2min se editan desde el diálogo de
-  // Lanzamientos (junto a Gol/P/X); Am/Roj/Az quedan ocultas por ahora.
+  // Para el equipo Local, Asist., 2min, Paradas y Gol. recib. se editan desde
+  // el diálogo de Lanzamientos (junto a Gol/P/X); Am/Roj/Az quedan ocultas
+  // por ahora.
   const extraStatsHtml = esLocalTeam
-    ? `${esPortero ? statCounterHtml('paradas', 'Paradas', stat.paradas) : ''}
-       ${esPortero ? statCounterHtml('golesRecibidos', 'Gol. recib.', stat.golesRecibidos) : ''}`
+    ? ''
     : `${statCounterHtml('asistencias', 'Asist.', stat.asistencias)}
        ${statCounterHtml('exclusiones2min', '2min', stat.exclusiones2min)}
        ${esPortero ? statCounterHtml('paradas', 'Paradas', stat.paradas) : ''}
@@ -812,7 +812,7 @@ function playerStatRowHtml(plantilla, jugador, stat, equipoId, esLocalTeam) {
     : `<div class="player-name">${nombreCompleto}</div>`;
   if (esLocalTeam) {
     return `
-      <div class="player-row" data-jugador-id="${jugador.id}" data-equipo-id="${equipoId}">
+      <div class="player-row" data-jugador-id="${jugador.id}" data-equipo-id="${equipoId}" data-es-portero="${esPortero}">
         <div class="tabular">#${plantilla.numeroCamiseta ?? '-'}</div>
         <div class="stat-controls player-line-local">
           ${nombreHtml}
@@ -854,6 +854,7 @@ function wireStatControls(view, partidoId) {
   view.querySelectorAll('.player-row').forEach((row) => {
     const jugadorId = row.dataset.jugadorId;
     const equipoId = row.dataset.equipoId;
+    const esPortero = row.dataset.esPortero === 'true';
     row.querySelectorAll('.stat-counter').forEach((counter) => {
       const field = counter.dataset.field;
       counter.querySelectorAll('button[data-delta]').forEach((btn) => {
@@ -872,7 +873,7 @@ function wireStatControls(view, partidoId) {
     row.querySelectorAll('[data-action="lanzamientos"]').forEach((trigger) => {
       trigger.addEventListener('click', async () => {
         const [partido, jugador] = await Promise.all([getById('partidos', partidoId), getById('jugadores', jugadorId)]);
-        if (partido && jugador) await openLanzamientosPicker(partido, jugador, equipoId);
+        if (partido && jugador) await openLanzamientosPicker(partido, jugador, equipoId, esPortero);
       });
     });
     const tablaBtn = row.querySelector('[data-action="tabla-jugador"]');
@@ -932,7 +933,7 @@ async function syncGolesFromTiros(partidoId, jugadorId, equipoId) {
   await put('estadisticas', touch(stat));
 }
 
-async function openLanzamientosPicker(partido, jugador, equipoId) {
+async function openLanzamientosPicker(partido, jugador, equipoId, esPortero) {
   const tipos = (await getAll('lanzamientos'))
     .sort((a, b) => (a.orden ?? 99) - (b.orden ?? 99) || a.nombre.localeCompare(b.nombre));
   openPicker({
@@ -940,11 +941,11 @@ async function openLanzamientosPicker(partido, jugador, equipoId) {
     items: tipos,
     labelFn: (t) => t.nombre,
     emptyMessage: 'No hay tipos de lanzamiento. Créalos en la pestaña Lanzamientos.',
-    onPick: (tipo) => openTiroDialog(partido, jugador, equipoId, tipo),
+    onPick: (tipo) => openTiroDialog(partido, jugador, equipoId, tipo, esPortero),
   });
 }
 
-async function openTiroDialog(partido, jugador, equipoId, tipo) {
+async function openTiroDialog(partido, jugador, equipoId, tipo, esPortero) {
   const dialog = document.getElementById('dialog-tiro');
   const tiro = await getById('tiros', tiroId(partido.id, jugador.id, tipo.id))
     || defaultTiro(partido.id, jugador.id, equipoId, tipo.id);
@@ -953,6 +954,12 @@ async function openTiroDialog(partido, jugador, equipoId, tipo) {
 
   document.getElementById('dialog-tiro-title').textContent = `${jugador.nombre} ${jugador.apellido} — ${tipo.nombre}`;
   const body = document.getElementById('dialog-tiro-body');
+  const lineaPortero = esPortero
+    ? `<div class="stat-controls" style="justify-content:center; margin-top:8px;">
+         ${statCounterHtml('paradas', 'Paradas', stat.paradas)}
+         ${statCounterHtml('golesRecibidos', 'Gol. recib.', stat.golesRecibidos)}
+       </div>`
+    : '';
   body.innerHTML = `
     <div class="stat-controls" style="justify-content:center;">
       ${statCounterHtml('gol', 'Gol', tiro.gol)}
@@ -962,7 +969,8 @@ async function openTiroDialog(partido, jugador, equipoId, tipo) {
     <div class="stat-controls" style="justify-content:center; margin-top:8px;">
       ${statCounterHtml('asistencias', 'Asist.', stat.asistencias)}
       ${statCounterHtml('exclusiones2min', '2min', stat.exclusiones2min)}
-    </div>`;
+    </div>
+    ${lineaPortero}`;
   body.querySelectorAll('.stat-controls').forEach((line, lineIndex) => {
     const target = lineIndex === 0 ? tiro : stat;
     line.querySelectorAll('.stat-counter').forEach((counter) => {
