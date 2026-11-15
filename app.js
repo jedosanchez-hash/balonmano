@@ -958,7 +958,8 @@ async function openTiroDialog(partido, jugador, equipoId, tipo) {
           valueEl.textContent = prev;
           tiro[field] = prev;
           console.error('Error guardando tiro:', err);
-          showToast(`No se pudo guardar: ${(err && (err.code || err.message)) || err}`);
+          const detalle = err && (err.code ? `${err.code}: ${err.message || ''}` : (err.message || String(err)));
+          showToast(`No se pudo guardar: ${detalle}`);
         }
       });
     });
