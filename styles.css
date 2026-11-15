@@ -327,6 +327,7 @@ dialog .dialog-actions {
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
+.teams-grid:has(> .card:only-child) { grid-template-columns: 1fr; }
 @media (max-width: 600px) {
   .teams-grid { grid-template-columns: 1fr; }
 }
@@ -341,6 +342,22 @@ dialog .dialog-actions {
 }
 .player-row:last-child { border-bottom: none; }
 .player-name { font-weight: 600; font-size: 0.9rem; }
+.player-name-clickable {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--color-link, var(--color-text));
+  text-decoration: underline;
+  text-decoration-color: var(--color-border);
+  cursor: pointer;
+  font: inherit;
+}
+.player-name-clickable:hover,
+.player-name-clickable:focus-visible { text-decoration-color: currentColor; }
 .stat-controls {
   display: flex;
   flex-wrap: wrap;

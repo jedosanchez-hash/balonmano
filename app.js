@@ -687,10 +687,24 @@ async function renderPartidoDetalle(view, partidoId) {
 
   // "esLocalTeam" = el equipo marcado como "Local" (mi equipo) en la pestaña
   // Equipos — no confundir con equipoLocalId/eLocal, que es el local/visitante
-  // de ESTE partido en particular.
+  // de ESTE partido en particular. En el detalle solo se muestra la plantilla
+  // de "mi equipo"; si ninguno de los dos está marcado como Local, se
+  // muestran ambos como respaldo.
   const equipoStatsBtnHtml = (col, equipoId) => col.esLocalTeam
     ? `<button type="button" class="btn" data-action="tabla-equipo" data-equipo-id="${equipoId}" style="margin-bottom:8px;">Estadísticas del equipo</button>`
     : '';
+
+  const equiposAMostrar = colLocal.esLocalTeam
+    ? [{ col: colLocal, equipoId: partido.equipoLocalId, equipo: eLocal }]
+    : colVisitante.esLocalTeam
+      ? [{ col: colVisitante, equipoId: partido.equipoVisitanteId, equipo: eVisitante }]
+      : [
+          { col: colLocal, equipoId: partido.equipoLocalId, equipo: eLocal },
+          { col: colVisitante, equipoId: partido.equipoVisitanteId, equipo: eVisitante },
+        ];
+  const teamsGridHtml = equiposAMostrar.map(({ col, equipoId, equipo }) => `
+    <div class="card"><h3>${escapeHtml(equipo ? equipo.nombre : '?')}</h3>${equipoStatsBtnHtml(col, equipoId)}${col.html}</div>
+  `).join('');
 
   view.innerHTML = `
     <div class="view-header">
@@ -707,8 +721,7 @@ async function renderPartidoDetalle(view, partidoId) {
       <div class="row-sub" style="text-align:center; margin-top:8px;">${formatDate(partido.fecha)}${partido.lugar ? ' · ' + escapeHtml(partido.lugar) : ''}</div>
     </div>
     <div class="teams-grid">
-      <div class="card"><h3>${escapeHtml(eLocal ? eLocal.nombre : '?')}</h3>${equipoStatsBtnHtml(colLocal, partido.equipoLocalId)}${colLocal.html}</div>
-      <div class="card"><h3>${escapeHtml(eVisitante ? eVisitante.nombre : '?')}</h3>${equipoStatsBtnHtml(colVisitante, partido.equipoVisitanteId)}${colVisitante.html}</div>
+      ${teamsGridHtml}
     </div>
     <button class="btn danger" data-action="eliminar">Eliminar partido</button>
   `;
@@ -782,11 +795,15 @@ function playerStatRowHtml(plantilla, jugador, stat, equipoId, esLocalTeam) {
     ? `<button type="button" class="btn" data-action="lanzamientos">Lanzamientos</button>
        <button type="button" class="btn" data-action="tabla-jugador">Tabla</button>`
     : '';
+  const nombreCompleto = `${escapeHtml(jugador.nombre)} ${escapeHtml(jugador.apellido)}`;
+  const nombreHtml = esLocalTeam
+    ? `<button type="button" class="player-name player-name-clickable" data-action="lanzamientos">${nombreCompleto}</button>`
+    : `<div class="player-name">${nombreCompleto}</div>`;
   return `
     <div class="player-row" data-jugador-id="${jugador.id}" data-equipo-id="${equipoId}">
       <div class="tabular">#${plantilla.numeroCamiseta ?? '-'}</div>
       <div>
-        <div class="player-name">${escapeHtml(jugador.nombre)} ${escapeHtml(jugador.apellido)}</div>
+        ${nombreHtml}
         <div class="stat-controls">
           ${golesControl}
           ${statCounterHtml('asistencias', 'Asist.', stat.asistencias)}
@@ -835,13 +852,12 @@ function wireStatControls(view, partidoId) {
         await render();
       });
     });
-    const lanzamientosBtn = row.querySelector('[data-action="lanzamientos"]');
-    if (lanzamientosBtn) {
-      lanzamientosBtn.addEventListener('click', async () => {
+    row.querySelectorAll('[data-action="lanzamientos"]').forEach((trigger) => {
+      trigger.addEventListener('click', async () => {
         const [partido, jugador] = await Promise.all([getById('partidos', partidoId), getById('jugadores', jugadorId)]);
         if (partido && jugador) await openLanzamientosPicker(partido, jugador, equipoId);
       });
-    }
+    });
     const tablaBtn = row.querySelector('[data-action="tabla-jugador"]');
     if (tablaBtn) {
       tablaBtn.addEventListener('click', async () => {
