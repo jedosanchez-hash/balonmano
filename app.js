@@ -971,6 +971,7 @@ async function openTiroDialog(partido, jugador, equipoId, tipo) {
               stat[field] = next;
               await put('estadisticas', touch(stat));
             }
+            dialog.close();
           } catch (err) {
             valueEl.textContent = prev;
             target[field] = prev;
