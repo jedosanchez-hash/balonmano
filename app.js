@@ -794,6 +794,18 @@ function playerStatRowHtml(plantilla, jugador, stat, equipoId, esLocalTeam) {
   const lanzamientosBtns = esLocalTeam
     ? `<button type="button" class="btn" data-action="tabla-jugador">Tabla</button>`
     : '';
+  // Para el equipo Local, Asist. y 2min se editan desde el diálogo de
+  // Lanzamientos (junto a Gol/P/X); Am/Roj/Az quedan ocultas por ahora.
+  const extraStatsHtml = esLocalTeam
+    ? `${esPortero ? statCounterHtml('paradas', 'Paradas', stat.paradas) : ''}
+       ${esPortero ? statCounterHtml('golesRecibidos', 'Gol. recib.', stat.golesRecibidos) : ''}`
+    : `${statCounterHtml('asistencias', 'Asist.', stat.asistencias)}
+       ${statCounterHtml('exclusiones2min', '2min', stat.exclusiones2min)}
+       ${esPortero ? statCounterHtml('paradas', 'Paradas', stat.paradas) : ''}
+       ${esPortero ? statCounterHtml('golesRecibidos', 'Gol. recib.', stat.golesRecibidos) : ''}
+       ${cardToggleHtml('tarjetaAmarilla', 'amarilla', 'Am', stat.tarjetaAmarilla)}
+       ${cardToggleHtml('tarjetaRoja', 'roja', 'Roj', stat.tarjetaRoja)}
+       ${cardToggleHtml('tarjetaAzul', 'azul', 'Az', stat.tarjetaAzul)}`;
   const nombreCompleto = `${escapeHtml(jugador.nombre)} ${escapeHtml(jugador.apellido)}`;
   const nombreHtml = esLocalTeam
     ? `<button type="button" class="player-name player-name-clickable" data-action="lanzamientos">${nombreCompleto}</button>`
@@ -805,13 +817,7 @@ function playerStatRowHtml(plantilla, jugador, stat, equipoId, esLocalTeam) {
         ${nombreHtml}
         <div class="stat-controls">
           ${golesControl}
-          ${statCounterHtml('asistencias', 'Asist.', stat.asistencias)}
-          ${statCounterHtml('exclusiones2min', '2min', stat.exclusiones2min)}
-          ${esPortero ? statCounterHtml('paradas', 'Paradas', stat.paradas) : ''}
-          ${esPortero ? statCounterHtml('golesRecibidos', 'Gol. recib.', stat.golesRecibidos) : ''}
-          ${cardToggleHtml('tarjetaAmarilla', 'amarilla', 'Am', stat.tarjetaAmarilla)}
-          ${cardToggleHtml('tarjetaRoja', 'roja', 'Roj', stat.tarjetaRoja)}
-          ${cardToggleHtml('tarjetaAzul', 'azul', 'Az', stat.tarjetaAzul)}
+          ${extraStatsHtml}
           ${lanzamientosBtns}
         </div>
       </div>
@@ -930,6 +936,7 @@ async function openTiroDialog(partido, jugador, equipoId, tipo) {
   const dialog = document.getElementById('dialog-tiro');
   const tiro = await getById('tiros', tiroId(partido.id, jugador.id, tipo.id))
     || defaultTiro(partido.id, jugador.id, equipoId, tipo.id);
+  const stat = await getOrCreateStat(partido.id, jugador.id, equipoId);
   let dirty = false;
 
   document.getElementById('dialog-tiro-title').textContent = `${jugador.nombre} ${jugador.apellido} — ${tipo.nombre}`;
@@ -939,27 +946,39 @@ async function openTiroDialog(partido, jugador, equipoId, tipo) {
       ${statCounterHtml('gol', 'Gol', tiro.gol)}
       ${statCounterHtml('parado', 'P', tiro.parado)}
       ${statCounterHtml('fuera', 'X', tiro.fuera)}
+    </div>
+    <div class="stat-controls" style="justify-content:center; margin-top:8px;">
+      ${statCounterHtml('asistencias', 'Asist.', stat.asistencias)}
+      ${statCounterHtml('exclusiones2min', '2min', stat.exclusiones2min)}
     </div>`;
-  body.querySelectorAll('.stat-counter').forEach((counter) => {
-    const field = counter.dataset.field;
-    const valueEl = counter.querySelector('.value');
-    counter.querySelectorAll('button[data-delta]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const delta = Number(btn.dataset.delta);
-        const prev = tiro[field] || 0;
-        const next = Math.max(0, prev + delta);
-        if (next === prev) return;
-        valueEl.textContent = next;
-        dirty = true;
-        try {
-          await saveTiro(tiro, field, next, partido.id, jugador.id, equipoId);
-        } catch (err) {
-          valueEl.textContent = prev;
-          tiro[field] = prev;
-          console.error('Error guardando tiro:', err);
-          const detalle = err && (err.code ? `${err.code}: ${err.message || ''}` : (err.message || String(err)));
-          showToast(`No se pudo guardar: ${detalle}`);
-        }
+  body.querySelectorAll('.stat-controls').forEach((line, lineIndex) => {
+    const target = lineIndex === 0 ? tiro : stat;
+    line.querySelectorAll('.stat-counter').forEach((counter) => {
+      const field = counter.dataset.field;
+      const valueEl = counter.querySelector('.value');
+      counter.querySelectorAll('button[data-delta]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const delta = Number(btn.dataset.delta);
+          const prev = target[field] || 0;
+          const next = Math.max(0, prev + delta);
+          if (next === prev) return;
+          valueEl.textContent = next;
+          dirty = true;
+          try {
+            if (lineIndex === 0) {
+              await saveTiro(tiro, field, next, partido.id, jugador.id, equipoId);
+            } else {
+              stat[field] = next;
+              await put('estadisticas', touch(stat));
+            }
+          } catch (err) {
+            valueEl.textContent = prev;
+            target[field] = prev;
+            console.error('Error guardando:', err);
+            const detalle = err && (err.code ? `${err.code}: ${err.message || ''}` : (err.message || String(err)));
+            showToast(`No se pudo guardar: ${detalle}`);
+          }
+        });
       });
     });
   });
