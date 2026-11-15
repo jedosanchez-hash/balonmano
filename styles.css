@@ -219,13 +219,19 @@ main {
 
 /* Listas con fondo azul/celeste claro intercalado (fijo, igual en claro/oscuro):
    pestaña Jugadores, pestaña Lanzamientos y el selector de tipo de
-   lanzamiento (ventana emergente) dentro del detalle de un partido. */
+   lanzamiento (ventana emergente) dentro del detalle de un partido.
+   El texto también se fija en oscuro: el fondo no cambia con el tema, así
+   que dejarlo en var(--color-text) se vuelve ilegible en modo oscuro. */
 #view-jugadores .row:nth-child(odd),
 #view-lanzamientos .row:nth-child(odd),
-#dialog-picker-list button:nth-of-type(odd) { background: #d9e8f8; }
+#dialog-picker-list button:nth-of-type(odd) { background: #d9e8f8; color: #16222f; }
 #view-jugadores .row:nth-child(even),
 #view-lanzamientos .row:nth-child(even),
-#dialog-picker-list button:nth-of-type(even) { background: #cdeef6; }
+#dialog-picker-list button:nth-of-type(even) { background: #cdeef6; color: #16222f; }
+#view-jugadores .row:nth-child(odd) .row-sub,
+#view-lanzamientos .row:nth-child(odd) .row-sub,
+#view-jugadores .row:nth-child(even) .row-sub,
+#view-lanzamientos .row:nth-child(even) .row-sub { color: #475a6e; }
 
 .pill {
   display: inline-flex;
@@ -358,9 +364,11 @@ dialog .dialog-actions {
 }
 .player-row:last-child { border-bottom: none; }
 /* Lista de jugadores en el detalle del partido: fondo azul/celeste claro
-   intercalado (fijo, igual en claro/oscuro). */
-.player-row:nth-of-type(odd) { background: #d9e8f8; }
-.player-row:nth-of-type(even) { background: #cdeef6; }
+   intercalado (fijo, igual en claro/oscuro). El texto se fija en oscuro
+   porque el fondo no cambia con el tema (en modo oscuro, el texto claro
+   por defecto queda ilegible sobre este fondo claro). */
+.player-row:nth-of-type(odd) { background: #d9e8f8; color: #16222f; }
+.player-row:nth-of-type(even) { background: #cdeef6; color: #16222f; }
 .player-name { font-weight: 600; font-size: 0.9rem; }
 .player-name-clickable {
   display: block;
@@ -378,6 +386,10 @@ dialog .dialog-actions {
 }
 .player-name-clickable:hover,
 .player-name-clickable:focus-visible { text-decoration-color: currentColor; }
+/* El fondo intercalado de .player-row es claro fijo; el nombre debe quedar
+   oscuro fijo también (si no, en modo oscuro hereda un color claro y se
+   pierde el contraste). */
+.player-row .player-name-clickable { color: #16222f; text-decoration-color: #16222f66; }
 .stat-controls {
   display: flex;
   flex-wrap: wrap;
