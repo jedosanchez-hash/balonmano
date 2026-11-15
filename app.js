@@ -898,12 +898,10 @@ function defaultTiro(partidoId, jugadorId, equipoId, lanzamientoId) {
   };
 }
 
-async function adjustTiro(partidoId, jugadorId, equipoId, lanzamientoId, field, delta) {
-  const id = tiroId(partidoId, jugadorId, lanzamientoId);
-  const existing = await getById('tiros', id) || defaultTiro(partidoId, jugadorId, equipoId, lanzamientoId);
-  existing[field] = Math.max(0, (existing[field] || 0) + delta);
-  await put('tiros', touch(existing));
-  await syncGolesFromTiros(partidoId, jugadorId, equipoId);
+async function saveTiro(tiro, field, nextValue, partidoId, jugadorId, equipoId) {
+  tiro[field] = nextValue;
+  await put('tiros', touch(tiro));
+  if (field === 'gol') await syncGolesFromTiros(partidoId, jugadorId, equipoId);
 }
 
 // Mantiene estadisticas.goles del jugador igual a la suma de goles de sus
@@ -931,24 +929,36 @@ async function openLanzamientosPicker(partido, jugador, equipoId) {
 
 async function openTiroDialog(partido, jugador, equipoId, tipo) {
   const dialog = document.getElementById('dialog-tiro');
-  const existing = await getById('tiros', tiroId(partido.id, jugador.id, tipo.id))
+  const tiro = await getById('tiros', tiroId(partido.id, jugador.id, tipo.id))
     || defaultTiro(partido.id, jugador.id, equipoId, tipo.id);
+  let dirty = false;
 
   document.getElementById('dialog-tiro-title').textContent = `${jugador.nombre} ${jugador.apellido} — ${tipo.nombre}`;
   const body = document.getElementById('dialog-tiro-body');
   body.innerHTML = `
     <div class="stat-controls" style="justify-content:center;">
-      ${statCounterHtml('gol', 'Gol', existing.gol)}
-      ${statCounterHtml('parado', 'P', existing.parado)}
-      ${statCounterHtml('fuera', 'X', existing.fuera)}
+      ${statCounterHtml('gol', 'Gol', tiro.gol)}
+      ${statCounterHtml('parado', 'P', tiro.parado)}
+      ${statCounterHtml('fuera', 'X', tiro.fuera)}
     </div>`;
   body.querySelectorAll('.stat-counter').forEach((counter) => {
     const field = counter.dataset.field;
+    const valueEl = counter.querySelector('.value');
     counter.querySelectorAll('button[data-delta]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        await adjustTiro(partido.id, jugador.id, equipoId, tipo.id, field, Number(btn.dataset.delta));
-        dialog.close();
-        await render();
+        const delta = Number(btn.dataset.delta);
+        const prev = tiro[field] || 0;
+        const next = Math.max(0, prev + delta);
+        if (next === prev) return;
+        valueEl.textContent = next;
+        dirty = true;
+        try {
+          await saveTiro(tiro, field, next, partido.id, jugador.id, equipoId);
+        } catch (err) {
+          valueEl.textContent = prev;
+          tiro[field] = prev;
+          showToast('No se pudo guardar el cambio. Revisa tu conexión e intenta de nuevo.');
+        }
       });
     });
   });
@@ -958,6 +968,7 @@ async function openTiroDialog(partido, jugador, equipoId, tipo) {
   function handleClose() {
     cerrarBtn.removeEventListener('click', handleCerrar);
     dialog.removeEventListener('close', handleClose);
+    if (dirty) render();
   }
   cerrarBtn.addEventListener('click', handleCerrar);
   dialog.addEventListener('close', handleClose);
