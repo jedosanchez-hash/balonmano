@@ -404,6 +404,32 @@ table th { color: var(--color-text-muted); font-weight: 600; font-size: 0.78rem;
 table td.num, table th.num { text-align: right; }
 .table-scroll { overflow-x: auto; }
 
+/* Tabla de lanzamientos: esquema de colores fijo (igual en claro/oscuro),
+   tomado de la planilla de referencia del usuario. */
+table.tabla-lanzamientos {
+  border: 3px solid #e8b923;
+  border-radius: 4px;
+  overflow: hidden;
+}
+table.tabla-lanzamientos thead th {
+  background: #2cb5ae;
+  color: #0a2e2b;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: none;
+  letter-spacing: normal;
+  border-bottom: none;
+}
+table.tabla-lanzamientos tbody td {
+  background: #ffffff;
+  color: #1a1a1a;
+}
+table.tabla-lanzamientos tbody tr.fila-totales td {
+  background: #1f3864;
+  color: #ffffff;
+  font-weight: 700;
+}
+
 .empty-state {
   text-align: center;
   padding: 40px 16px;

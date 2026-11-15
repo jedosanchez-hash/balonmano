@@ -1031,10 +1031,10 @@ function buildLanzamientosTableHtml(rows, totalGolesEquipo) {
   const totalT = totalGol + totalParado + totalFuera;
   const totalEfe = efeFromGol(totalGol, totalT);
   const totalPct = totalGolesEquipo > 0 ? totalGol / totalGolesEquipo : 0;
-  return `<div class="table-scroll"><table class="tabular">
+  return `<div class="table-scroll"><table class="tabular tabla-lanzamientos">
     <thead><tr><th>Lanzamiento</th><th class="num">% Eq</th><th class="num">Gol</th><th class="num">P</th><th class="num">X</th><th class="num">T</th><th class="num">Efe %</th></tr></thead>
     <tbody>${body}
-      <tr><td><strong>Totales</strong></td><td class="num">${formatPercent(totalPct)}</td><td class="num">${totalGol}</td><td class="num">${totalParado}</td><td class="num">${totalFuera}</td><td class="num">${totalT}</td><td class="num">${formatPercent(totalEfe)}</td></tr>
+      <tr class="fila-totales"><td><strong>Totales</strong></td><td class="num">${formatPercent(totalPct)}</td><td class="num">${totalGol}</td><td class="num">${totalParado}</td><td class="num">${totalFuera}</td><td class="num">${totalT}</td><td class="num">${formatPercent(totalEfe)}</td></tr>
     </tbody>
   </table></div>`;
 }
