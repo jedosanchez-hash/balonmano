@@ -1027,7 +1027,7 @@ function formatPercent(x) {
   return `${Math.round(x * 100)}%`;
 }
 
-function buildLanzamientosTableHtml(rows, totalGolesEquipo) {
+function buildLanzamientosTableHtml(rows, totalGolesEquipo, variante) {
   let totalGol = 0;
   let totalParado = 0;
   let totalFuera = 0;
@@ -1051,7 +1051,8 @@ function buildLanzamientosTableHtml(rows, totalGolesEquipo) {
   const totalT = totalGol + totalParado + totalFuera;
   const totalEfe = efeFromGol(totalGol, totalT);
   const totalPct = totalGolesEquipo > 0 ? totalGol / totalGolesEquipo : 0;
-  return `<div class="table-scroll"><table class="tabular tabla-lanzamientos">
+  const varianteClass = variante ? ` tabla-lanzamientos--${variante}` : '';
+  return `<div class="table-scroll"><table class="tabular tabla-lanzamientos${varianteClass}">
     <thead><tr><th>Lanzamiento</th><th class="num">% Eq</th><th class="num">Gol</th><th class="num">P</th><th class="num">X</th><th class="num">T</th><th class="num">Efe %</th></tr></thead>
     <tbody>${body}
       <tr class="fila-totales"><td><strong>Totales</strong></td><td class="num">${formatPercent(totalPct)}</td><td class="num">${totalGol}</td><td class="num">${totalParado}</td><td class="num">${totalFuera}</td><td class="num">${totalT}</td><td class="num">${formatPercent(totalEfe)}</td></tr>
@@ -1059,10 +1060,10 @@ function buildLanzamientosTableHtml(rows, totalGolesEquipo) {
   </table></div>`;
 }
 
-function openTablaDialog(title, rows, totalGolesEquipo) {
+function openTablaDialog(title, rows, totalGolesEquipo, variante) {
   const dialog = document.getElementById('dialog-tabla');
   document.getElementById('dialog-tabla-title').textContent = title;
-  document.getElementById('dialog-tabla-content').innerHTML = buildLanzamientosTableHtml(rows, totalGolesEquipo);
+  document.getElementById('dialog-tabla-content').innerHTML = buildLanzamientosTableHtml(rows, totalGolesEquipo, variante);
   const cerrarBtn = document.getElementById('dialog-tabla-cerrar');
   function handleCerrar() { dialog.close(); }
   function handleClose() {
@@ -1111,7 +1112,7 @@ async function showTablaEquipo(partido, equipoId, equipoNombre) {
   }
   const rows = tipos.map((tipo) => ({ nombre: tipo.nombre, ...(byTipo.get(tipo.id) || { gol: 0, parado: 0, fuera: 0 }) }));
   const totalGolesEquipo = rows.reduce((sum, r) => sum + r.gol, 0);
-  openTablaDialog(`Lanzamientos del equipo — ${equipoNombre}`, rows, totalGolesEquipo);
+  openTablaDialog(`Lanzamientos del equipo — ${equipoNombre}`, rows, totalGolesEquipo, 'equipo');
 }
 
 // ---------- reportes ----------

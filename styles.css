@@ -458,6 +458,25 @@ table.tabla-lanzamientos tbody tr.fila-totales td {
   font-weight: 700;
 }
 
+/* Estadísticas del equipo: variante en azul y celeste. */
+table.tabla-lanzamientos--equipo {
+  border-color: #1565c0;
+}
+table.tabla-lanzamientos--equipo thead th {
+  background: #1565c0;
+  color: #ffffff;
+}
+table.tabla-lanzamientos--equipo tbody tr:nth-child(odd) td {
+  background: #ffffff;
+}
+table.tabla-lanzamientos--equipo tbody tr:nth-child(even) td {
+  background: #d8ecfa;
+}
+table.tabla-lanzamientos--equipo tbody tr.fila-totales td {
+  background: #1565c0;
+  color: #ffffff;
+}
+
 .empty-state {
   text-align: center;
   padding: 40px 16px;
